@@ -40,6 +40,7 @@ typedef struct _xdebug_file {
 #endif
 	} fp;
 	char *name;
+	xdebug_str *buffer;
 } xdebug_file;
 
 xdebug_file *xdebug_file_ctor(void);
@@ -51,5 +52,6 @@ int xdebug_file_flush(xdebug_file *file);
 int XDEBUG_ATTRIBUTE_FORMAT(printf, 2, 3) xdebug_file_printf(xdebug_file *file, const char *fmt, ...);
 size_t xdebug_file_write(const void *ptr, size_t size, size_t nmemb, xdebug_file *file);
 int xdebug_file_close(xdebug_file *file);
+int xdebug_file_buffer_flush(xdebug_file *file);
 
 #endif

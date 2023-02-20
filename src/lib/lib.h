@@ -243,6 +243,8 @@ typedef struct _xdebug_library_settings_t {
 	/* Logging settings */
 	char         *log;       /* Filename to log protocol communication to */
 	zend_long     log_level; /* Log level XDEBUG_LOG_{ERR,WARN,INFO,DEBUG} */
+
+	zend_bool    buffer_output;
 } xdebug_library_settings_t;
 
 void xdebug_init_library_globals(xdebug_library_globals_t *xg);

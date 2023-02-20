@@ -265,6 +265,8 @@ ZEND_INI_DISP(display_start_upon_error)
 # define USE_COMPRESSION_DEFAULT "0"
 #endif
 
+# define BUFFER_OUTPUT_DEFAULT "1"
+
 PHP_INI_BEGIN()
 	/* Library settings */
 	STD_PHP_INI_ENTRY("xdebug.mode",               "develop",               PHP_INI_SYSTEM,                OnUpdateString, settings.library.requested_mode,   zend_xdebug_globals, xdebug_globals)
@@ -278,6 +280,8 @@ PHP_INI_BEGIN()
 
 	STD_PHP_INI_ENTRY("xdebug.log",       "",           PHP_INI_ALL, OnUpdateString, settings.library.log,       zend_xdebug_globals, xdebug_globals)
 	STD_PHP_INI_ENTRY("xdebug.log_level", XLOG_DEFAULT, PHP_INI_ALL, OnUpdateLong,   settings.library.log_level, zend_xdebug_globals, xdebug_globals)
+
+	STD_PHP_INI_ENTRY("xdebug.buffer_output",     BUFFER_OUTPUT_DEFAULT,   PHP_INI_ALL,                    OnUpdateBool,   settings.library.buffer_output,    zend_xdebug_globals, xdebug_globals)
 
 	/* Variable display settings */
 	STD_PHP_INI_ENTRY("xdebug.var_display_max_children", "128",     PHP_INI_ALL,    OnUpdateLong,   settings.library.display_max_children, zend_xdebug_globals, xdebug_globals)
