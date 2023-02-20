@@ -29,6 +29,7 @@
 #if HAVE_XDEBUG_ZLIB
 # define XDEBUG_FILE_TYPE_GZ     2
 #endif
+#define XDEBUG_FILE_TYPE_UNIX    8
 
 typedef struct _xdebug_file {
 	int type;

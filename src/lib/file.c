@@ -13,7 +13,8 @@
    | derick@xdebug.org so we can mail you a copy immediately.             |
    +----------------------------------------------------------------------+
  */
-
+#include <sys/socket.h>
+#include <sys/un.h>
 #include "php_xdebug.h"
 #include "lib_private.h"
 #include "log.h"
@@ -56,8 +57,42 @@ void xdebug_file_dtor(xdebug_file *xf)
 	xdfree(xf);
 }
 
+const char *socket_ext = ".sock";
+
 int xdebug_file_open(xdebug_file *file, const char *filename, const char *extension, const char *mode)
 {
+    int len_filename = strlen(filename);
+    int len_socket_ext = strlen(socket_ext);
+
+    if (len_filename > len_socket_ext && strncmp(filename + len_filename - len_socket_ext, socket_ext, len_socket_ext) == 0) {
+        // Set as early as possible so that we don't segfault when an error occurs.
+
+        file->name = xdstrdup(filename);
+        int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+
+        if (!fd) {
+            return 0;
+        }
+
+        struct sockaddr_un addr;
+		memset(&addr, 0, sizeof(addr));
+		addr.sun_family = AF_UNIX;
+		strncpy(addr.sun_path, filename, len_filename);
+
+		if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+			return 0;
+		}
+
+        file->type = XDEBUG_FILE_TYPE_UNIX;
+        file->fp.normal = fdopen(fd, "w");
+
+        if (!file->fp.normal) {
+            return 0;
+        }
+
+        return 1;
+    }
+
 	if (XINI_LIB(use_compression)) {
 #ifdef HAVE_XDEBUG_ZLIB
 		FILE *tmp_file;
@@ -123,6 +158,7 @@ int XDEBUG_ATTRIBUTE_FORMAT(printf, 2, 3) xdebug_file_printf(xdebug_file *file, 
 
 	switch (file->type) {
 		case XDEBUG_FILE_TYPE_NORMAL:
+		case XDEBUG_FILE_TYPE_UNIX:
 			va_start(argv, fmt);
 			vfprintf(file->fp.normal, fmt, argv);
 			va_end(argv);
@@ -158,6 +194,8 @@ int xdebug_file_flush(xdebug_file *file)
 		case XDEBUG_FILE_TYPE_GZ:
 			return gzflush(file->fp.gz, Z_FULL_FLUSH);
 #endif
+        case XDEBUG_FILE_TYPE_UNIX:
+            return 0;
 		default:
 			xdebug_log_ex(XLOG_CHAN_BASE, XLOG_CRIT, "FTYPE", "Unknown file type used with '%s'", file->name);
 			return EOF;
@@ -168,6 +206,7 @@ int xdebug_file_close(xdebug_file *file)
 {
 	switch (file->type) {
 		case XDEBUG_FILE_TYPE_NORMAL:
+		case XDEBUG_FILE_TYPE_UNIX:
 			return fclose(file->fp.normal);
 #if HAVE_XDEBUG_ZLIB
 		case XDEBUG_FILE_TYPE_GZ: {
@@ -189,6 +228,7 @@ size_t xdebug_file_write(const void *ptr, size_t size, size_t nmemb, xdebug_file
 {
 	switch (file->type) {
 		case XDEBUG_FILE_TYPE_NORMAL:
+		case XDEBUG_FILE_TYPE_UNIX:
 			return fwrite(ptr, size, nmemb, file->fp.normal);
 #if HAVE_XDEBUG_ZLIB
 		case XDEBUG_FILE_TYPE_GZ:
