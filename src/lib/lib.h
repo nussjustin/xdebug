@@ -69,6 +69,8 @@ typedef struct xdebug_var_name {
 #define XDEBUG_TRACE_OPTION_COMPUTERIZED   2
 #define XDEBUG_TRACE_OPTION_HTML           4
 #define XDEBUG_TRACE_OPTION_NAKED_FILENAME 8
+#define XDEBUG_TRACE_OPTION_NOOP          16
+#define XDEBUG_TRACE_OPTION_FLAMEGRAPH    32
 
 #define XDEBUG_CC_OPTION_UNUSED          1
 #define XDEBUG_CC_OPTION_DEAD_CODE       2

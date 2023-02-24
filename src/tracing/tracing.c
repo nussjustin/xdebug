@@ -21,6 +21,8 @@
 #include "trace_textual.h"
 #include "trace_computerized.h"
 #include "trace_html.h"
+#include "trace_noop.h"
+#include "trace_flamegraph.h"
 
 #include "lib/compat.h"
 #include "lib/log.h"
@@ -37,6 +39,8 @@ static xdebug_trace_handler_t *xdebug_select_trace_handler(int options)
 		case 0: tmp = &xdebug_trace_handler_textual; break;
 		case 1: tmp = &xdebug_trace_handler_computerized; break;
 		case 2: tmp = &xdebug_trace_handler_html; break;
+		case 16: tmp = &xdebug_trace_handler_noop; break;
+		case 32: tmp = &xdebug_trace_handler_flamegraph; break;
 		default:
 			php_error(E_NOTICE, "A wrong value for xdebug.trace_format was selected (%d), defaulting to the textual format", (int) XINI_TRACE(trace_format));
 			tmp = &xdebug_trace_handler_textual; break;
@@ -47,6 +51,12 @@ static xdebug_trace_handler_t *xdebug_select_trace_handler(int options)
 	}
 	if (options & XDEBUG_TRACE_OPTION_HTML) {
 		tmp = &xdebug_trace_handler_html;
+	}
+	if (options & XDEBUG_TRACE_OPTION_NOOP) {
+		tmp = &xdebug_trace_handler_noop;
+	}
+	if (options & XDEBUG_TRACE_OPTION_FLAMEGRAPH) {
+		tmp = &xdebug_trace_handler_flamegraph;
 	}
 
 	if (!tmp->init || !tmp->deinit || !tmp->get_filename) {
@@ -657,6 +667,8 @@ void xdebug_tracing_register_constants(INIT_FUNC_ARGS)
 	REGISTER_LONG_CONSTANT("XDEBUG_TRACE_COMPUTERIZED", XDEBUG_TRACE_OPTION_COMPUTERIZED, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("XDEBUG_TRACE_HTML", XDEBUG_TRACE_OPTION_HTML, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("XDEBUG_TRACE_NAKED_FILENAME", XDEBUG_TRACE_OPTION_NAKED_FILENAME, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("XDEBUG_TRACE_NOOP", XDEBUG_TRACE_OPTION_NOOP, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("XDEBUG_TRACE_FLAMEGRAPH", XDEBUG_TRACE_OPTION_FLAMEGRAPH, CONST_CS | CONST_PERSISTENT);
 }
 
 void xdebug_tracing_rinit(void)
