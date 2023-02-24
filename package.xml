@@ -193,8 +193,8 @@ Mon, Jun 06, 2022 - Xdebug 3.1.5
      <file name="trace_html.h" role="src" />
      <file name="trace_noop.c" role="src" />
      <file name="trace_noop.h" role="src" />
-     <file name="trace_flamegraph.c" role="src" />
-     <file name="trace_flamegraph.h" role="src" />
+     <file name="trace_collapsed.c" role="src" />
+     <file name="trace_collapsed.h" role="src" />
     </dir>
    </dir>
   </dir> <!-- / -->

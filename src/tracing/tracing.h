@@ -50,7 +50,7 @@ typedef struct _xdebug_tracing_settings_t {
 	zend_bool     collect_assignments;
 	zend_bool     collect_return;
 
-	char         *trace_flamegraph_mode;
+	char         *trace_collapsed_sample_type;
 } xdebug_tracing_settings_t;
 
 void xdebug_init_tracing_globals(xdebug_tracing_globals_t *xg);

@@ -341,7 +341,7 @@ PHP_INI_BEGIN()
 	STD_PHP_INI_ENTRY("xdebug.trace_options",     "0",                  PHP_INI_ALL,    OnUpdateLong,   settings.tracing.trace_options,     zend_xdebug_globals, xdebug_globals)
 	STD_PHP_INI_BOOLEAN("xdebug.collect_assignments", "0",              PHP_INI_ALL,    OnUpdateBool,   settings.tracing.collect_assignments, zend_xdebug_globals, xdebug_globals)
 	STD_PHP_INI_BOOLEAN("xdebug.collect_return",  "0",                  PHP_INI_ALL,    OnUpdateBool,   settings.tracing.collect_return,    zend_xdebug_globals, xdebug_globals)
-	STD_PHP_INI_ENTRY("xdebug.trace_flamegraph_mode", "calls",          PHP_INI_ALL,    OnUpdateString, settings.tracing.trace_flamegraph_mode, zend_xdebug_globals, xdebug_globals)
+	STD_PHP_INI_ENTRY("xdebug.trace_collapsed_sample_type", "calls",    PHP_INI_ALL,    OnUpdateString, settings.tracing.trace_collapsed_sample_type, zend_xdebug_globals, xdebug_globals)
 
 	/* Removed/Changed settings */
 	XDEBUG_CHANGED_INI_ENTRY(xdebug.auto_trace)
