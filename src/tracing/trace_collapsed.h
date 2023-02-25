@@ -31,7 +31,7 @@ typedef struct _xdebug_trace_collapsed_context
 	xdebug_file *trace_file;
         zend_long    mode;
 
-	xdebug_trace_collapsed_frame root;
+	xdebug_trace_collapsed_frame *root;
 	xdebug_trace_collapsed_frame *current;
 	uint64_t                      current_start;
 } xdebug_trace_collapsed_context;

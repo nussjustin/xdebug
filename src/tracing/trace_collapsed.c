@@ -10,6 +10,38 @@
 
 extern ZEND_DECLARE_MODULE_GLOBALS(xdebug);
 
+void xdebug_trace_collapsed_frame_init(xdebug_trace_collapsed_frame *frame)
+{
+	frame->function.name = NULL;
+	frame->function.internal = 0;
+	frame->function.type = 0;
+
+	frame->calls = 0;
+	frame->entry = 0;
+	frame->nanotime = 0;
+
+	frame->first_child = NULL;
+	frame->next = NULL;
+	frame->parent = NULL;
+}
+
+void xdebug_trace_collapsed_frame_deinit(xdebug_trace_collapsed_frame *frame)
+{
+        xdebug_trace_collapsed_frame *child = frame->first_child;
+
+        while (child != NULL) {
+	        xdebug_trace_collapsed_frame *next = child->next;
+                xdebug_trace_collapsed_frame_deinit(child);
+                child = next;
+        }
+
+        if (frame->function.name != NULL) {
+                xdfree(frame->function.name);
+        }
+
+        xdfree(frame);
+}
+
 int xdebug_trace_collapsed_frame_for_function(xdebug_trace_collapsed_frame *frame, xdebug_func function)
 {
         if (frame->function.internal != function.internal || frame->function.type != function.type) {
@@ -56,20 +88,11 @@ void *xdebug_trace_collapsed_init(char *fname, zend_string *script_filename, lon
         }
 
 	tmp_collapsed_context = xdmalloc(sizeof(xdebug_trace_collapsed_context));
-	tmp_collapsed_context->current = &tmp_collapsed_context->root;
+        tmp_collapsed_context->root = xdmalloc(sizeof(xdebug_trace_collapsed_frame));
+	tmp_collapsed_context->current = tmp_collapsed_context->root;
 	tmp_collapsed_context->mode = mode;
 
-	tmp_collapsed_context->root.function.name = NULL;
-	tmp_collapsed_context->root.function.internal = 0;
-	tmp_collapsed_context->root.function.type = 0;
-
-	tmp_collapsed_context->root.calls = 0;
-	tmp_collapsed_context->root.entry = 0;
-	tmp_collapsed_context->root.nanotime = 0;
-
-	tmp_collapsed_context->root.first_child = NULL;
-	tmp_collapsed_context->root.next = NULL;
-	tmp_collapsed_context->root.parent = NULL;
+        xdebug_trace_collapsed_frame_init(tmp_collapsed_context->root);
 
 	tmp_collapsed_context->trace_file = xdebug_trace_open_file(fname, script_filename, options);
 
@@ -89,29 +112,9 @@ void xdebug_trace_collapsed_deinit(void *ctxt)
 	xdebug_file_dtor(context->trace_file);
 	context->trace_file = NULL;
 
-	xdebug_trace_collapsed_frame *frame = &context->root;
+        xdebug_trace_collapsed_frame_deinit(context->root);
 
-	do {
-		// Find deepest
-		while (frame->first_child != NULL) {
-			frame = frame->first_child;
-		}
-
-		xdebug_trace_collapsed_frame *parent = frame->parent;
-
-		// Make next frame the first child
-		parent->first_child = frame->next;
-
-                // Now free the frame
-                if (frame->function.name != NULL) {
-                        xdfree(frame->function.name);
-                }
-
-		xdfree(frame);
-
-		// Re-try parent.
-		frame = parent;
-	} while (frame != NULL && frame != &context->root);
+        context->root = NULL;
 
 	xdfree(context);
 }
@@ -149,7 +152,7 @@ void xdebug_trace_collapsed_write_frame(
 void xdebug_trace_collapsed_write_footer(void *ctxt)
 {
 	xdebug_trace_collapsed_context *context = (xdebug_trace_collapsed_context*) ctxt;
-	xdebug_trace_collapsed_frame *frame = context->root.first_child;
+	xdebug_trace_collapsed_frame *frame = context->root->first_child;
 
 	xdebug_str prefix = XDEBUG_STR_INITIALIZER;
 
@@ -180,15 +183,12 @@ void xdebug_trace_collapsed_function_entry(void *ctxt, function_stack_entry *fse
 	if (frame == NULL) {
 		frame = xdmalloc(sizeof(xdebug_trace_collapsed_frame));
 
+                xdebug_trace_collapsed_frame_init(frame);
+
                 frame->function.name = xdebug_show_fname(fse->function, XDEBUG_SHOW_FNAME_DEFAULT);
 	        frame->function.internal = fse->function.internal;
 	        frame->function.type = fse->function.type;
 
-                frame->calls = 0;
-                frame->entry = 0;
-                frame->nanotime = 0;
-
-		frame->first_child = NULL;
 		frame->next = context->current->first_child;
 		frame->parent = context->current;
 
