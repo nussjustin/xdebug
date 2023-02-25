@@ -6,16 +6,9 @@
 #define XDEBUG_COLLAPSED_MODE_CALLS 0
 #define XDEBUG_COLLAPSED_MODE_TIME 1
 
-typedef struct _xdebug_trace_collapsed_function
-{
-	char *name;
-        int   internal;
-        int   type;
-} xdebug_trace_collapsed_function;
-
 typedef struct _xdebug_trace_collapsed_frame
 {
-        xdebug_trace_collapsed_function function;
+        char *function;
 
 	uint64_t calls;
 	uint64_t entry;
@@ -30,6 +23,8 @@ typedef struct _xdebug_trace_collapsed_context
 {
 	xdebug_file *trace_file;
         zend_long    mode;
+
+        HashTable   *string_table;
 
 	xdebug_trace_collapsed_frame *root;
 	xdebug_trace_collapsed_frame *current;

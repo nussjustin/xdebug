@@ -12,9 +12,7 @@ extern ZEND_DECLARE_MODULE_GLOBALS(xdebug);
 
 void xdebug_trace_collapsed_frame_init(xdebug_trace_collapsed_frame *frame)
 {
-	frame->function.name = NULL;
-	frame->function.internal = 0;
-	frame->function.type = 0;
+	frame->function = NULL;
 
 	frame->calls = 0;
 	frame->entry = 0;
@@ -35,39 +33,82 @@ void xdebug_trace_collapsed_frame_deinit(xdebug_trace_collapsed_frame *frame)
                 child = next;
         }
 
-        if (frame->function.name != NULL) {
-                xdfree(frame->function.name);
-        }
-
         xdfree(frame);
 }
 
-int xdebug_trace_collapsed_frame_for_function(xdebug_trace_collapsed_frame *frame, xdebug_func function)
+char* xdebug_trace_collapsed_function_name(xdebug_trace_collapsed_context *context, xdebug_func f)
 {
-        if (frame->function.internal != function.internal || frame->function.type != function.type) {
-                return 0;
-        }
+        char *key = NULL;
 
-        // All types other than the one listed here are identified by their type only, so we can exit without comparing the names.
-	switch (function.type) {
-	        case XFUNC_NORMAL:
-	        case XFUNC_STATIC_MEMBER:
-	        case XFUNC_MEMBER:
-  #if PHP_VERSION_ID >= 80100
-	        case XFUNC_FIBER:
-  #endif
+	switch (f.type) {
+		case XFUNC_NORMAL: {
+			key = f.function;
+			break;
+		}
+
+		case XFUNC_STATIC_MEMBER:
+		case XFUNC_MEMBER: {
+		        if (f.scope_class) {
+			        key = xdebug_sprintf("%s%s%s",
+				        ZSTR_VAL(f.scope_class),
+				        f.type == XFUNC_STATIC_MEMBER ? "::" : "->",
+				        f.function ? f.function : "?"
+			        );
+		        } else {
+		                key = xdebug_sprintf("%s%s%s",
+			                f.object_class ? ZSTR_VAL(f.object_class) : "?",
+			                f.type == XFUNC_STATIC_MEMBER ? "::" : "->",
+			                f.function ? f.function : "?"
+		                );
+                        }
+
+			break;
+		}
+
+#if PHP_VERSION_ID >= 80100
+		case XFUNC_FIBER:
+			key = f.function;
                         break;
-                default:
-                        return 1;
+#endif
+
+		case XFUNC_EVAL:
+			return "eval";
+
+		case XFUNC_INCLUDE:
+			return "include";
+
+		case XFUNC_INCLUDE_ONCE:
+			return "include_once";
+
+		case XFUNC_REQUIRE:
+			return "require";
+
+		case XFUNC_REQUIRE_ONCE:
+			return "require_once";
+
+		case XFUNC_MAIN:
+			return "{main}";
+
+		case XFUNC_ZEND_PASS:
+			return "{zend_pass}";
+
+		default:
+			return "{unknown}";
+	}
+
+        int key_len = strlen(key);
+
+        zval *interned = zend_hash_str_find(context->string_table, key, key_len);
+
+        if (interned == NULL) {
+                interned = xdmalloc(sizeof(zval));
+
+                ZVAL_STRINGL(interned, key, key_len);
+
+                zend_hash_str_add(context->string_table, key, key_len, interned);
         }
 
-        char *name = xdebug_show_fname(function, XDEBUG_SHOW_FNAME_DEFAULT);
-
-        int result = strcasecmp(frame->function.name, name);
-
-        xdfree(name);
-
-        return result == 0;
+        return Z_STRVAL_P(interned);
 }
 
 void *xdebug_trace_collapsed_init(char *fname, zend_string *script_filename, long options)
@@ -94,6 +135,9 @@ void *xdebug_trace_collapsed_init(char *fname, zend_string *script_filename, lon
 
         xdebug_trace_collapsed_frame_init(tmp_collapsed_context->root);
 
+        ALLOC_HASHTABLE(tmp_collapsed_context->string_table);
+        zend_hash_init(tmp_collapsed_context->string_table, 1024, zval_ptr_dtor, NULL, 0);
+
 	tmp_collapsed_context->trace_file = xdebug_trace_open_file(fname, script_filename, options);
 
 	if (!tmp_collapsed_context->trace_file) {
@@ -113,8 +157,11 @@ void xdebug_trace_collapsed_deinit(void *ctxt)
 	context->trace_file = NULL;
 
         xdebug_trace_collapsed_frame_deinit(context->root);
-
         context->root = NULL;
+
+        zend_hash_destroy(context->string_table);
+        FREE_HASHTABLE(context->string_table);
+        context->string_table = NULL;
 
 	xdfree(context);
 }
@@ -128,7 +175,7 @@ void xdebug_trace_collapsed_write_frame(
 	xdebug_str str = XDEBUG_STR_INITIALIZER;
 
 	xdebug_str_add_str(&str, &prefix);
-	xdebug_str_add(&str, frame->function.name, false);
+	xdebug_str_add(&str, frame->function, false);
 
         switch (context->mode) {
                 case XDEBUG_COLLAPSED_MODE_CALLS:
@@ -176,7 +223,9 @@ void xdebug_trace_collapsed_function_entry(void *ctxt, function_stack_entry *fse
 
 	xdebug_trace_collapsed_frame *frame = context->current->first_child;
 
-	while (frame != NULL && !xdebug_trace_collapsed_frame_for_function(frame, fse->function)) {
+        char *function = xdebug_trace_collapsed_function_name(context, fse->function);
+
+	while (frame != NULL && frame->function != function) {
 		frame = frame->next;
 	}
 
@@ -185,10 +234,7 @@ void xdebug_trace_collapsed_function_entry(void *ctxt, function_stack_entry *fse
 
                 xdebug_trace_collapsed_frame_init(frame);
 
-                frame->function.name = xdebug_show_fname(fse->function, XDEBUG_SHOW_FNAME_DEFAULT);
-	        frame->function.internal = fse->function.internal;
-	        frame->function.type = fse->function.type;
-
+                frame->function = function;
 		frame->next = context->current->first_child;
 		frame->parent = context->current;
 
