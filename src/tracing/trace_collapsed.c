@@ -12,7 +12,7 @@ extern ZEND_DECLARE_MODULE_GLOBALS(xdebug);
 
 int xdebug_trace_collapsed_frame_for_function(xdebug_trace_collapsed_frame *frame, xdebug_func function)
 {
-        if (frame->function_internal != function.internal || frame->function_type != function.type) {
+        if (frame->function.internal != function.internal || frame->function.type != function.type) {
                 return 0;
         }
 
@@ -31,7 +31,7 @@ int xdebug_trace_collapsed_frame_for_function(xdebug_trace_collapsed_frame *fram
 
         char *name = xdebug_show_fname(function, XDEBUG_SHOW_FNAME_DEFAULT);
 
-        int result = strcasecmp(frame->function, name);
+        int result = strcasecmp(frame->function.name, name);
 
         xdfree(name);
 
@@ -59,9 +59,9 @@ void *xdebug_trace_collapsed_init(char *fname, zend_string *script_filename, lon
 	tmp_collapsed_context->current = &tmp_collapsed_context->root;
 	tmp_collapsed_context->mode = mode;
 
-	tmp_collapsed_context->root.function = NULL;
-	tmp_collapsed_context->root.function_internal = 0;
-	tmp_collapsed_context->root.function_type = 0;
+	tmp_collapsed_context->root.function.name = NULL;
+	tmp_collapsed_context->root.function.internal = 0;
+	tmp_collapsed_context->root.function.type = 0;
 
 	tmp_collapsed_context->root.calls = 0;
 	tmp_collapsed_context->root.entry = 0;
@@ -103,8 +103,8 @@ void xdebug_trace_collapsed_deinit(void *ctxt)
 		parent->first_child = frame->next;
 
                 // Now free the frame
-                if (frame->function != NULL) {
-                        xdfree(frame->function);
+                if (frame->function.name != NULL) {
+                        xdfree(frame->function.name);
                 }
 
 		xdfree(frame);
@@ -125,7 +125,7 @@ void xdebug_trace_collapsed_write_frame(
 	xdebug_str str = XDEBUG_STR_INITIALIZER;
 
 	xdebug_str_add_str(&str, &prefix);
-	xdebug_str_add(&str, frame->function, false);
+	xdebug_str_add(&str, frame->function.name, false);
 
         switch (context->mode) {
                 case XDEBUG_COLLAPSED_MODE_CALLS:
@@ -180,9 +180,9 @@ void xdebug_trace_collapsed_function_entry(void *ctxt, function_stack_entry *fse
 	if (frame == NULL) {
 		frame = xdmalloc(sizeof(xdebug_trace_collapsed_frame));
 
-                frame->function = xdebug_show_fname(fse->function, XDEBUG_SHOW_FNAME_DEFAULT);
-	        frame->function_internal = fse->function.internal;
-	        frame->function_type = fse->function.type;
+                frame->function.name = xdebug_show_fname(fse->function, XDEBUG_SHOW_FNAME_DEFAULT);
+	        frame->function.internal = fse->function.internal;
+	        frame->function.type = fse->function.type;
 
                 frame->calls = 0;
                 frame->entry = 0;
